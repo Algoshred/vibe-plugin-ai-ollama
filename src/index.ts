@@ -217,6 +217,17 @@ interface AIAgentProvider {
   attachFiles?(sessionId: string, files: AIFileAttachment[]): Promise<void>;
   getMode?(): ProviderMode;
   setMode?(mode: ProviderMode): void;
+  getCliLaunchSpec(): {
+    binary: string;
+    baseArgs?: string[];
+    env?: Record<string, string>;
+  } | null;
+  sdkOneShot(opts: {
+    prompt: string;
+    model?: string;
+    maxTokens?: number;
+    extras?: Record<string, unknown>;
+  }): Promise<{ text: string; usage?: unknown }>;
 }
 
 // Log ingester interface (from ai plugin's service registry)
@@ -1201,6 +1212,48 @@ class OllamaProvider implements AIAgentProvider {
   async healthCheck(): Promise<{ ok: boolean; message?: string }> {
     const adapter = this.getAdapter();
     return adapter.healthCheck();
+  }
+
+  // ── `vibe ai run` / `vibe ai sdk` integration ────────────────────────
+
+  getCliLaunchSpec(): {
+    binary: string;
+    baseArgs?: string[];
+    env?: Record<string, string>;
+  } | null {
+    const env: Record<string, string> = {};
+    const apiKey =
+      process.env["OLLAMA_API_KEY"]?.trim() || this.cachedApiKey;
+    const host = process.env["OLLAMA_HOST"]?.trim() || this.cachedHost;
+    if (apiKey) env["OLLAMA_API_KEY"] = apiKey;
+    if (host) env["OLLAMA_HOST"] = host;
+    return { binary: CLI_COMMAND, env };
+  }
+
+  async sdkOneShot(opts: {
+    prompt: string;
+    model?: string;
+    maxTokens?: number;
+    extras?: Record<string, unknown>;
+  }): Promise<{ text: string; usage?: unknown }> {
+    const adapter = new OllamaSdkAdapter(() => this.resolveConnection());
+    const config: AISessionConfig = {
+      name: "vibe-ai-sdk",
+      agentType: PROVIDER_NAME,
+      model: opts.model ?? DEFAULT_MODEL,
+      maxTokens: opts.maxTokens ?? DEFAULT_MAX_TOKENS,
+      providerConfig: opts.extras,
+    };
+    const result = await adapter.sendPrompt(opts.prompt, config);
+    return {
+      text: result.content,
+      usage: {
+        inputTokens: result.inputTokens,
+        outputTokens: result.outputTokens,
+        model: result.model,
+        durationMs: result.durationMs,
+      },
+    };
   }
 
   // ── Private Helpers ──────────────────────────────────────────────────

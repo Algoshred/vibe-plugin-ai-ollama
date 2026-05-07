@@ -1,6 +1,6 @@
 {
   "name": "@vibecontrols/vibe-plugin-ai-ollama",
-  "version": "2026.507.1",
+  "version": "2026.508.1",
   "type": "module",
   "main": "./dist/index.js",
   "description": "Ollama AI agent provider for VibeControls Agent (CLI + SDK, Cloud + self-hosted)",
