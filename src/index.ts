@@ -54,7 +54,18 @@ interface AIFileAttachment {
   size: number;
 }
 
+interface PluginCapabilities {
+  storage?: "none" | "read" | "rw";
+  secrets?: "none" | "read" | "rw";
+  gateway?: boolean;
+  broadcast?: boolean;
+  subprocess?: boolean;
+  audit?: boolean;
+  telemetry?: boolean;
+}
+
 interface VibePlugin {
+  capabilities?: PluginCapabilities;
   name: string;
   version: string;
   description?: string;
@@ -83,6 +94,9 @@ interface VibePlugin {
 }
 
 interface HostServices {
+  telemetry?: {
+    emit: (name: string, payload?: Record<string, unknown>) => void;
+  };
   logger?: {
     info: (source: string, msg: string) => void;
     warn: (source: string, msg: string) => void;
@@ -282,6 +296,21 @@ interface ProviderAdapter {
 
 const PROVIDER_NAME = "ollama";
 const CLI_COMMAND = "ollama";
+/**
+ * Resolve CLI binary path with platform-correct extension.
+ * On Windows, Bun.spawn calls CreateProcess directly (no PATHEXT), so a bare
+ * name won't find `name.exe`/`name.cmd`. Bun.which searches PATH like the shell.
+ */
+function resolveCliBin(): string {
+  const found =
+    typeof Bun !== "undefined" && typeof Bun.which === "function"
+      ? Bun.which(CLI_COMMAND)
+      : null;
+  if (found) return found;
+  return process.platform === "win32" ? `${CLI_COMMAND}.exe` : CLI_COMMAND;
+}
+const CLI_BIN = resolveCliBin();
+
 const DISPLAY_NAME = "Ollama";
 const DEFAULT_MODEL = "llama3.2";
 const DEFAULT_MAX_TOKENS = 4096;
@@ -657,7 +686,7 @@ class OllamaCliAdapter implements ProviderAdapter {
     // exits. (No streaming when prompt is passed positionally.)
     const args = ["run", model, prompt];
 
-    const proc = Bun.spawn([CLI_COMMAND, ...args], {
+    const proc = Bun.spawn([CLI_BIN, ...args], {
       stdout: "pipe",
       stderr: "pipe",
       cwd: config.workingDirectory || process.cwd(),
@@ -709,7 +738,7 @@ class OllamaCliAdapter implements ProviderAdapter {
     const model = config.model || DEFAULT_MODEL;
     const args = ["run", model, prompt];
 
-    const proc = Bun.spawn([CLI_COMMAND, ...args], {
+    const proc = Bun.spawn([CLI_BIN, ...args], {
       stdout: "pipe",
       stderr: "pipe",
       cwd: config.workingDirectory || process.cwd(),
@@ -759,7 +788,7 @@ class OllamaCliAdapter implements ProviderAdapter {
 
   async healthCheck(): Promise<{ ok: boolean; message?: string }> {
     try {
-      const proc = Bun.spawnSync([CLI_COMMAND, "--version"], {
+      const proc = Bun.spawnSync([CLI_BIN, "--version"], {
         timeout: 5000,
         stdout: "pipe",
         stderr: "ignore",
@@ -1354,7 +1383,7 @@ void DEFAULT_MAX_TOKENS;
 
 function getCliVersion(): string | null {
   try {
-    const proc = Bun.spawnSync([CLI_COMMAND, "--version"], {
+    const proc = Bun.spawnSync([CLI_BIN, "--version"], {
       timeout: 5000,
       stdout: "pipe",
       stderr: "ignore",
@@ -1426,6 +1455,12 @@ function createPrereqsRoutes() {
 const provider = new OllamaProvider();
 
 export const vibePlugin: VibePlugin = {
+  capabilities: {
+    secrets: "read",
+    subprocess: true,
+    gateway: false,
+    telemetry: true,
+  },
   name: "ollama",
   version: "1.0.0",
   description:
@@ -1444,6 +1479,7 @@ export const vibePlugin: VibePlugin = {
   createRoutes: () => createPrereqsRoutes(),
 
   onServerStart(_app, hostServices) {
+    hostServices?.telemetry?.emit("ai.provider.ready", { provider: "ollama" });
     if (hostServices) provider.setHostServices(hostServices);
   },
 
