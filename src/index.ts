@@ -934,13 +934,8 @@ class OllamaProvider implements AIAgentProvider {
     }
 
     try {
-      const finder = process.platform === "win32" ? "where.exe" : "which";
-      const proc = Bun.spawnSync([finder, CLI_COMMAND], {
-        timeout: 3000,
-        stdout: "pipe",
-        stderr: "ignore",
-      });
-      if (proc.exitCode === 0) return "cli";
+      // Cross-platform binary discovery via Bun.which (handles PATHEXT on Windows).
+      if (Bun.which(CLI_COMMAND)) return "cli";
     } catch {
       // CLI not found
     }
