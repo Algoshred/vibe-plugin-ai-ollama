@@ -18,7 +18,11 @@
  */
 
 import { Elysia } from "elysia";
-import type { HostServices, VibePlugin } from "@vibecontrols/plugin-sdk";
+import type {
+  HostServices,
+  VibePlugin,
+  ProfileContext,
+} from "@vibecontrols/plugin-sdk";
 import {
   BoundLogger,
   ProviderRegistry,
@@ -1427,7 +1431,7 @@ type OllamaVibePlugin = VibePlugin & {
   providers?: { ai?: AIAgentProvider };
 };
 
-export const vibePlugin: OllamaVibePlugin = {
+export const createPlugin = (_ctx: ProfileContext): OllamaVibePlugin => ({
   capabilities: {
     secrets: "read",
     subprocess: true,
@@ -1451,6 +1455,4 @@ export const vibePlugin: OllamaVibePlugin = {
   createRoutes: () => createPrereqsRoutes(),
   onServerStart: lifecycle.onServerStart,
   onServerStop: lifecycle.onServerStop,
-};
-
-export default vibePlugin;
+});
