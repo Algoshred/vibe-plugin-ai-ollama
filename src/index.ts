@@ -79,7 +79,7 @@ type AILogType =
   | "error"
   | "metadata";
 
-type PermissionMode = "plan" | "acceptEdits" | "fullAuto";
+export type PermissionMode = "plan" | "acceptEdits" | "fullAuto";
 
 interface AISessionConfig {
   name: string;
@@ -653,7 +653,12 @@ class OllamaCliAdapter implements ProviderAdapter {
 
     // `ollama run <model> <prompt>` prints the response to stdout and
     // exits. (No streaming when prompt is passed positionally.)
-    const args = ["run", model, prompt, ...permissionFlags(config.permissionMode)];
+    const args = [
+      "run",
+      model,
+      prompt,
+      ...permissionFlags(config.permissionMode),
+    ];
 
     const proc = Bun.spawn([CLI_BIN, ...args], {
       stdout: "pipe",
@@ -705,7 +710,12 @@ class OllamaCliAdapter implements ProviderAdapter {
     // chunk as a text event so the UI sees incremental output.
     const startTime = Date.now();
     const model = config.model || DEFAULT_MODEL;
-    const args = ["run", model, prompt, ...permissionFlags(config.permissionMode)];
+    const args = [
+      "run",
+      model,
+      prompt,
+      ...permissionFlags(config.permissionMode),
+    ];
 
     const proc = Bun.spawn([CLI_BIN, ...args], {
       stdout: "pipe",
