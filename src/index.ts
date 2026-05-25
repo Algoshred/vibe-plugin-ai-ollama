@@ -79,6 +79,8 @@ type AILogType =
   | "error"
   | "metadata";
 
+export type PermissionMode = "plan" | "acceptEdits" | "fullAuto";
+
 interface AISessionConfig {
   name: string;
   agentType: string;
@@ -87,7 +89,18 @@ interface AISessionConfig {
   temperature?: number;
   systemPrompt?: string;
   workingDirectory?: string;
+  /** Per-session autonomy level. No-op for ollama (see permissionFlags). */
+  permissionMode?: PermissionMode;
   providerConfig?: Record<string, unknown>;
+}
+
+/**
+ * `ollama run` is a text generator — it has no tool execution, file edits, or
+ * shell access — so there is no autonomy concept and every mode is a no-op.
+ * The field is accepted for provider-agnostic parity with the other plugins.
+ */
+export function permissionFlags(_mode: PermissionMode | undefined): string[] {
+  return [];
 }
 
 interface AISession {
@@ -640,7 +653,12 @@ class OllamaCliAdapter implements ProviderAdapter {
 
     // `ollama run <model> <prompt>` prints the response to stdout and
     // exits. (No streaming when prompt is passed positionally.)
-    const args = ["run", model, prompt];
+    const args = [
+      "run",
+      model,
+      prompt,
+      ...permissionFlags(config.permissionMode),
+    ];
 
     const proc = Bun.spawn([CLI_BIN, ...args], {
       stdout: "pipe",
@@ -692,7 +710,12 @@ class OllamaCliAdapter implements ProviderAdapter {
     // chunk as a text event so the UI sees incremental output.
     const startTime = Date.now();
     const model = config.model || DEFAULT_MODEL;
-    const args = ["run", model, prompt];
+    const args = [
+      "run",
+      model,
+      prompt,
+      ...permissionFlags(config.permissionMode),
+    ];
 
     const proc = Bun.spawn([CLI_BIN, ...args], {
       stdout: "pipe",
