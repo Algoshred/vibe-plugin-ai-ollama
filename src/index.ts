@@ -1403,6 +1403,26 @@ function createPrereqsRoutes() {
         };
       }
 
+      // The upstream `curl ... | sh` installer requires a POSIX shell, which
+      // is absent on native Windows. Guide the user to the Windows installer
+      // rather than attempting to run `sh`.
+      if (process.platform === "win32") {
+        return {
+          ok: false,
+          installed: [],
+          pendingSudo: [],
+          errors: [
+            {
+              name: CLI_COMMAND,
+              message:
+                `${DISPLAY_NAME} cannot be auto-installed on Windows. ` +
+                "Download and run the official Windows installer from " +
+                "https://ollama.com/download/windows, then retry.",
+            },
+          ],
+        };
+      }
+
       const proc = Bun.spawnSync(CLI_INSTALL_COMMAND, {
         timeout: 300_000,
         stdout: "pipe",
