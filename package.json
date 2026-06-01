@@ -1,6 +1,6 @@
 {
   "name": "@vibecontrols/vibe-plugin-ai-ollama",
-  "version": "2026.509.5",
+  "version": "2026.601.1",
   "type": "module",
   "main": "./dist/index.js",
   "description": "Ollama AI agent provider for VibeControls Agent (CLI + SDK, Cloud + self-hosted)",
@@ -26,7 +26,7 @@
     "sanity": "bun run format:check && bun run lint && bun run type:check && bun run build && bun run test"
   },
   "dependencies": {
-    "@vibecontrols/plugin-sdk": "2026.509.2",
+    "@vibecontrols/plugin-sdk": "2026.601.1",
     "elysia": "^1.3.0",
     "ollama": "0.6.3"
   },

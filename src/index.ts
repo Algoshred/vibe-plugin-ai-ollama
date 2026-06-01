@@ -277,7 +277,7 @@ function platformExeName(base: string): string {
 function resolveCliBin(): string {
   const found =
     typeof Bun !== "undefined" && typeof Bun.which === "function"
-      ? Bun.which(CLI_COMMAND)
+      ? Bun.which(CLI_COMMAND, { PATH: process.env.PATH })
       : null;
   if (found) return found;
   return platformExeName(CLI_COMMAND);
@@ -921,7 +921,7 @@ class OllamaProvider implements AIAgentProvider {
 
     try {
       // Cross-platform binary discovery via Bun.which (handles PATHEXT on Windows).
-      if (Bun.which(CLI_COMMAND)) return "cli";
+      if (Bun.which(CLI_COMMAND, { PATH: process.env.PATH })) return "cli";
     } catch {
       // CLI not found
     }
